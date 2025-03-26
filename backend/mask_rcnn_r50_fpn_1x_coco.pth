@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Error>
+  <Code>NoSuchKey</Code>
+  <Message>The specified key does not exist.</Message>
+  <RequestId>67D86D004292EA3734C7CE3F</RequestId>
+  <HostId>openmmlab-share.oss-cn-hangzhou.aliyuncs.com</HostId>
+  <Key>mmdetection/v2.0/mask_rcnn_r50_fpn_1x_coco/mask_rcnn_r50_fpn_1x_coco.pth</Key>
+  <EC>0026-00000001</EC>
+  <RecommendDoc>https://api.aliyun.com/troubleshoot?q=0026-00000001</RecommendDoc>
+</Error>

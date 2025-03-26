@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./backend/damage_utils",
+        "./backend/damage_"
+    ]
+}
