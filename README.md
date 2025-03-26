@@ -1,4 +1,4 @@
-Vehicle Damage Detection and Cost Estimation System
+LLM infused Vehicle Damage Detection and Repair Cost Estimation System
 
 1. Introduction
 
