@@ -191,6 +191,11 @@ The process begins when the user uploads an image of a damaged vehicle through a
 <img width="1440" alt="s6" src="https://github.com/user-attachments/assets/508f6a74-f35e-4265-8996-0ea04a237c4d" />
 
 
+Download Report here -  
+
+[Vehicle Damage Detection and Cost Estimation System.docx](https://github.com/user-attachments/files/19472107/Vehicle.Damage.Detection.and.Cost.Estimation.System.RA2211026050088.docx)
+
+
 
 
 
