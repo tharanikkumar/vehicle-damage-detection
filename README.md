@@ -111,10 +111,10 @@ CREATE TABLE IF NOT EXISTS damage_reports (
 ### 4. Cropped Previews
 ![Previews](./screenshots/Screenshot4.png)
 
-### 5. Generated PDF
+### 5. Gemini Estimate
 ![PDF](./screenshots/Screenshot5.png)
 
-### 6. Gemini Estimate
+### 6. Generated PDF
 ![Gemini](./screenshots/Screenshot6.png)
 
 ---
