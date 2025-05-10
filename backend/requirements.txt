@@ -1,5 +1,11 @@
 Flask
+Werkzeug
 mysql-connector-python
-mmcv
 opencv-python
-werkzeu
+google-generativeai
+fpdf
+streamlit
+requests
+inference-sdk
+Pillow
+python-dotenv
