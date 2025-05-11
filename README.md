@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS damage_reports (
 ## How to Run the Project (Manual)
 
 ### Backend (Flask):
-
+Terminal 1
 ```bash
 cd backend
 pip install -r requirements.txt
@@ -130,7 +130,7 @@ python app.py
 ```
 
 ### Frontend (Streamlit):
-
+Terminal 2
 ```bash
 cd frontend
 pip install -r requirements.txt
