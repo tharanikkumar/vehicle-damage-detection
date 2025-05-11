@@ -169,3 +169,12 @@ Access:
 - Streamlit
 - Flask
 - FPDF
+
+## Roboflow Trained Model
+
+https://app.roboflow.com/seai-sq6is/car-paint-damage-detection-qwpiw/models/car-paint-damage-detection-qwpiw/1
+
+## Author
+
+Tharanikkumar K
+https://github.com/tharanikkumar
