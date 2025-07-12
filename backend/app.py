@@ -80,12 +80,17 @@ def upload_image():
                 return jsonify({'message': result["message"]})
 
             damage_list = result["damage_results"]
-            marked_img = result['marked_image']
+            marked_image_path = result['marked_image']  # This is the path to image file
 
-            # Save marked image to static folder
+            # ✅ Load the marked image from path returned by detect_damage
+            marked_img = cv2.imread(marked_image_path)
+            if marked_img is None:
+                raise Exception("Failed to load marked image for saving.")
+
+            # ✅ Save marked image to static folder for frontend access
             marked_filename = f"{uuid.uuid4().hex}_marked.jpg"
-            marked_path = os.path.join(app.static_folder, marked_filename)
-            cv2.imwrite(marked_path, marked_img)
+            marked_output_path = os.path.join(app.static_folder, marked_filename)
+            cv2.imwrite(marked_output_path, marked_img)
 
             cost_summary = estimate_cost(damage_list, car_brand)
 
@@ -102,13 +107,13 @@ def upload_image():
                 'damage_result': convert_to_python(damage_list),
                 'cost': convert_to_python(cost_summary),
                 'original_image': f"uploads/{filename}",
-                'marked_image': f"static/{marked_filename}",
+                'marked_image': f"static/{marked_filename}",  # For frontend to fetch
                 'car_brand': car_brand
             })
 
         except Exception as e:
             print(f"[ERROR]: {e}")
-            return jsonify({'error': 'Error processing the uploaded image'}), 500
+            return jsonify({'error': f'Error processing the uploaded image: {str(e)}'}), 500
 
     return jsonify({'error': 'File upload failed'}), 400
 
