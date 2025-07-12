@@ -174,6 +174,19 @@ Access:
 
 https://app.roboflow.com/seai-sq6is/car-paint-damage-detection-qwpiw/models/car-paint-damage-detection-qwpiw/1
 
+## Aiven for Cloud Database 
+
+Running in :
+https://console.aiven.io/account/a547fe29f36a/project/tharanikkumar6-3e97/services/vehicle-mysql/overview
+
+## Deployed in Render (Frontend and Backend)
+
+https://dashboard.render.com/
+
+## Live Demo
+
+Click here - https://vehicle-damage-detection-1.onrender.com
+
 ## Author
 
 Tharanikkumar K
