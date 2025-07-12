@@ -19,10 +19,12 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # MySQL connection
 db = mysql.connector.connect(
-    host=os.getenv("DB_HOST", "mysql"),
-    user=os.getenv("DB_USER", "root"),
-    password=os.getenv("DB_PASSWORD", ""),
-    database=os.getenv("DB_NAME", "vehicle_damage")
+    host=os.getenv("DB_HOST"),
+    port=int(os.getenv("DB_PORT")),  # Set to 18280 in your Render env
+    user=os.getenv("DB_USER"),
+    password=os.getenv("DB_PASSWORD"),
+    database=os.getenv("DB_NAME"),
+    ssl_disabled=False  # Required by Aiven
 )
 
 @app.route('/car_brands', methods=['GET'])
