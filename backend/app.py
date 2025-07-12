@@ -11,21 +11,28 @@ import mysql.connector
 
 load_dotenv()
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='static')
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-
+os.makedirs(app.static_folder, exist_ok=True)  # For marked images
 
 # MySQL connection
 db = mysql.connector.connect(
     host=os.getenv("DB_HOST"),
-    port=int(os.getenv("DB_PORT")),  # Set to 18280 in your Render env
+    port=int(os.getenv("DB_PORT", 3306)),
     user=os.getenv("DB_USER"),
     password=os.getenv("DB_PASSWORD"),
     database=os.getenv("DB_NAME"),
-    ssl_disabled=False  # Required by Aiven
+    ssl_disabled=False
 )
+
+@app.route('/')
+def home():
+    return """
+    <h2>🚗 Vehicle Damage Detection API</h2>
+    <p>Use <code>/upload</code> endpoint to POST an image and detect car damage.</p>
+    <p>Use <code>/car_brands</code> to get a list of supported brands.</p>
+    """
 
 @app.route('/car_brands', methods=['GET'])
 def get_car_brands():
@@ -33,9 +40,9 @@ def get_car_brands():
         'car_brands': ["Toyota", "Honda", "Ford", "BMW", "Mercedes", "Audi", "Chevrolet", "Nissan", "Hyundai", "Kia"]
     })
 
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+@app.route('/static/<path:filename>')
+def serve_static_file(filename):
+    return send_from_directory(app.static_folder, filename)
 
 def convert_to_python(obj):
     if isinstance(obj, dict):
@@ -46,8 +53,7 @@ def convert_to_python(obj):
         return float(obj)
     elif isinstance(obj, (np.int32, np.int64, int)):
         return int(obj)
-    else:
-        return obj
+    return obj
 
 @app.route('/upload', methods=['POST'])
 def upload_image():
@@ -58,7 +64,7 @@ def upload_image():
     car_brand = request.form.get('car_brand')
     if not car_brand:
         return jsonify({'error': 'Car brand not provided'}), 400
-    
+
     if file:
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
@@ -74,10 +80,16 @@ def upload_image():
                 return jsonify({'message': result["message"]})
 
             damage_list = result["damage_results"]
-            marked_image_path = result['marked_image']
+            marked_img = result['marked_image']
+
+            # Save marked image to static folder
+            marked_filename = f"{uuid.uuid4().hex}_marked.jpg"
+            marked_path = os.path.join(app.static_folder, marked_filename)
+            cv2.imwrite(marked_path, marked_img)
+
             cost_summary = estimate_cost(damage_list, car_brand)
 
-            # Save to database
+            # Save to DB
             cursor = db.cursor()
             cursor.execute(
                 "INSERT INTO damage_reports (image_path, damage_result, cost_estimation) VALUES (%s, %s, %s)",
@@ -90,7 +102,7 @@ def upload_image():
                 'damage_result': convert_to_python(damage_list),
                 'cost': convert_to_python(cost_summary),
                 'original_image': f"uploads/{filename}",
-                'marked_image': f"{marked_image_path}",
+                'marked_image': f"static/{marked_filename}",
                 'car_brand': car_brand
             })
 
@@ -99,13 +111,6 @@ def upload_image():
             return jsonify({'error': 'Error processing the uploaded image'}), 500
 
     return jsonify({'error': 'File upload failed'}), 400
-@app.route('/')
-def home():
-    return """
-    <h2>🚗 Vehicle Damage Detection API</h2>
-    <p>Use <code>/upload</code> endpoint to POST an image and detect car damage.</p>
-    <p>Use <code>/car_brands</code> to get a list of supported brands.</p>
-    """
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5050, debug=True)
