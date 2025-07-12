@@ -99,6 +99,13 @@ def upload_image():
             return jsonify({'error': 'Error processing the uploaded image'}), 500
 
     return jsonify({'error': 'File upload failed'}), 400
+@app.route('/')
+def home():
+    return """
+    <h2>🚗 Vehicle Damage Detection API</h2>
+    <p>Use <code>/upload</code> endpoint to POST an image and detect car damage.</p>
+    <p>Use <code>/car_brands</code> to get a list of supported brands.</p>
+    """
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5050, debug=True)

@@ -5,6 +5,9 @@ import io
 from fpdf import FPDF
 import base64
 
+# === Your backend URL on Render ===
+BACKEND_URL = "https://vehicle-damage-detection-2.onrender.com"
+
 st.set_page_config(page_title="Vehicle Damage Detection", layout="wide")
 
 # --- Custom Styling ---
@@ -67,7 +70,7 @@ if "marked_bytes" not in st.session_state:
 
 # --- Input Fields ---
 try:
-    brands = requests.get("http://backend:5050/car_brands").json()
+    brands = requests.get(f"{BACKEND_URL}/car_brands").json()
     brand_options = [""] + brands.get("car_brands", [])
 except:
     brand_options = [""]
@@ -139,13 +142,13 @@ if submit_button and uploaded_file and selected_brand:
         data = {"car_brand": selected_brand}
 
         try:
-            response = requests.post("http://backend:5050/upload", files=files, data=data)
+            response = requests.post(f"{BACKEND_URL}/upload", files=files, data=data)
             if response.status_code == 200:
                 result = response.json()
                 if "damage_result" in result:
                     uploaded_file.seek(0)
                     st.session_state.original_bytes = uploaded_file.read()
-                    st.session_state.marked_bytes = requests.get(f"http://backend:5050/{result['marked_image']}").content
+                    st.session_state.marked_bytes = requests.get(f"{BACKEND_URL}/{result['marked_image']}").content
                     st.session_state.result = result
                     st.success("Damage Detection Completed!")
                 else:
