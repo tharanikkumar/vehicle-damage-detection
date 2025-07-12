@@ -1,11 +1,12 @@
 import streamlit as st
 import requests
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 import io
 from fpdf import FPDF
 import base64
+import os
 
-# === Your backend URL on Render ===
+# === Your deployed backend Render URL ===
 BACKEND_URL = "https://vehicle-damage-detection-2.onrender.com"
 
 st.set_page_config(page_title="Vehicle Damage Detection", layout="wide")
@@ -60,7 +61,7 @@ st.markdown("""
 st.markdown('<div class="title">Vehicle Damage Detection</div>', unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Upload a car image to detect damages and get cost estimation in ₹</div>', unsafe_allow_html=True)
 
-# --- Preserve State
+# --- State Init ---
 if "result" not in st.session_state:
     st.session_state.result = None
 if "original_bytes" not in st.session_state:
@@ -68,7 +69,7 @@ if "original_bytes" not in st.session_state:
 if "marked_bytes" not in st.session_state:
     st.session_state.marked_bytes = None
 
-# --- Input Fields ---
+# --- Input Section ---
 try:
     brands = requests.get(f"{BACKEND_URL}/car_brands").json()
     brand_options = [""] + brands.get("car_brands", [])
@@ -79,7 +80,7 @@ selected_brand = st.selectbox("Select Car Brand", brand_options)
 uploaded_file = st.file_uploader("Upload Car Image", type=["jpg", "jpeg", "png"])
 submit_button = st.button("🔍 Detect Damage & Estimate")
 
-# --- PDF Generator
+# --- PDF Generator ---
 def generate_pdf(damage_data, marked_img_bytes, original_img_bytes, cost_data):
     pdf = FPDF()
     pdf.add_page()
@@ -92,14 +93,20 @@ def generate_pdf(damage_data, marked_img_bytes, original_img_bytes, cost_data):
     pdf.cell(95, 10, "Original Image", ln=0, align="C")
     pdf.cell(0, 10, "Marked Image", ln=1, align="C")
 
-    with open("original_temp.jpg", "wb") as f:
-        f.write(original_img_bytes)
-    with open("marked_temp.jpg", "wb") as f:
-        f.write(marked_img_bytes)
+    try:
+        with open("original_temp.jpg", "wb") as f:
+            f.write(original_img_bytes)
+        Image.open("original_temp.jpg").verify()
 
-    pdf.image("original_temp.jpg", x=10, y=40, w=90)
-    pdf.image("marked_temp.jpg", x=110, y=40, w=90)
-    pdf.ln(100)
+        with open("marked_temp.jpg", "wb") as f:
+            f.write(marked_img_bytes)
+        Image.open("marked_temp.jpg").verify()
+
+        pdf.image("original_temp.jpg", x=10, y=40, w=90)
+        pdf.image("marked_temp.jpg", x=110, y=40, w=90)
+        pdf.ln(100)
+    except UnidentifiedImageError:
+        raise RuntimeError("❌ Failed to generate report — image is corrupted or not JPEG/PNG format.")
 
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(0, 10, "Detected Damages", ln=True)
@@ -118,9 +125,11 @@ def generate_pdf(damage_data, marked_img_bytes, original_img_bytes, cost_data):
             path = f"crop_{idx}.jpg"
             crop.save(path)
             y = pdf.get_y()
-            if y > 250: pdf.add_page()
+            if y > 250:
+                pdf.add_page()
             pdf.image(path, x=15, y=y, w=50)
             pdf.ln(55)
+            os.remove(path)
 
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(0, 10, "Estimated Repair Cost", ln=True)
@@ -133,9 +142,16 @@ def generate_pdf(damage_data, marked_img_bytes, original_img_bytes, cost_data):
 
     pdf.output("VehicleDamageReport.pdf")
     with open("VehicleDamageReport.pdf", "rb") as f:
-        return base64.b64encode(f.read()).decode()
+        encoded = base64.b64encode(f.read()).decode()
 
-# --- Submit
+    # Cleanup
+    os.remove("original_temp.jpg")
+    os.remove("marked_temp.jpg")
+    os.remove("VehicleDamageReport.pdf")
+
+    return encoded
+
+# --- Submit Button Action ---
 if submit_button and uploaded_file and selected_brand:
     with st.spinner("⏳ Processing image and analyzing damage..."):
         files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
@@ -148,17 +164,18 @@ if submit_button and uploaded_file and selected_brand:
                 if "damage_result" in result:
                     uploaded_file.seek(0)
                     st.session_state.original_bytes = uploaded_file.read()
-                    st.session_state.marked_bytes = requests.get(f"{BACKEND_URL}/{result['marked_image']}").content
+                    marked_img_url = f"{BACKEND_URL}/{result['marked_image']}"
+                    st.session_state.marked_bytes = requests.get(marked_img_url).content
                     st.session_state.result = result
-                    st.success("Damage Detection Completed!")
+                    st.success("✅ Damage Detection Completed!")
                 else:
-                    st.warning(result.get("message", "Unexpected format"))
+                    st.warning(result.get("message", "Unexpected response format."))
             else:
                 st.error(f"❌ Server Error: {response.status_code}")
         except Exception as e:
             st.error(f"⚠️ Could not connect to backend: {e}")
 
-# --- Display Stored Result
+# --- Show Results ---
 if st.session_state.result:
     result = st.session_state.result
     original_bytes = st.session_state.original_bytes
@@ -170,19 +187,22 @@ if st.session_state.result:
     with col2:
         st.image(Image.open(io.BytesIO(marked_bytes)), caption="Marked Image", use_container_width=True)
 
-    pdf_base64 = generate_pdf(result["damage_result"], marked_bytes, original_bytes, result["cost"])
-    pdf_bytes = base64.b64decode(pdf_base64)
+    try:
+        pdf_base64 = generate_pdf(result["damage_result"], marked_bytes, original_bytes, result["cost"])
+        pdf_bytes = base64.b64decode(pdf_base64)
 
-    colr1, colr2 = st.columns([6, 1])
-    with colr1:
-        st.markdown('<div class="section-title">🔧 Damage Report</div>', unsafe_allow_html=True)
-    with colr2:
-        st.download_button(
-            label="📄 PDF Report",
-            data=pdf_bytes,
-            file_name="VehicleDamageReport.pdf",
-            mime="application/pdf"
-        )
+        colr1, colr2 = st.columns([6, 1])
+        with colr1:
+            st.markdown('<div class="section-title">🔧 Damage Report</div>', unsafe_allow_html=True)
+        with colr2:
+            st.download_button(
+                label="📄 PDF Report",
+                data=pdf_bytes,
+                file_name="VehicleDamageReport.pdf",
+                mime="application/pdf"
+            )
+    except Exception as e:
+        st.error(f"❌ Failed to generate PDF: {e}")
 
     for idx, dmg in enumerate(result["damage_result"]):
         part = dmg.get("part", "")
