@@ -5,6 +5,7 @@ import io
 from fpdf import FPDF
 import base64
 import os
+import re
 
 BACKEND_URL = "https://vehicle-damage-detection-2.onrender.com"
 
@@ -32,7 +33,6 @@ if "original_bytes" not in st.session_state:
 if "marked_bytes" not in st.session_state:
     st.session_state.marked_bytes = None
 
-# Input
 try:
     brands = requests.get(f"{BACKEND_URL}/car_brands").json()
     brand_options = [""] + brands.get("car_brands", [])
@@ -42,6 +42,14 @@ except:
 selected_brand = st.selectbox("Select Car Brand", brand_options)
 uploaded_file = st.file_uploader("Upload Car Image", type=["jpg", "jpeg", "png"])
 submit_button = st.button("🔍 Detect Damage & Estimate")
+
+# 🔧 Remove emojis and Unicode for PDF
+def sanitize_text(text):
+    if not text:
+        return ""
+    text = text.replace("₹", "Rs.").replace("🔍", "").replace("**", "")
+    text = re.sub(r'[^\x00-\x7F]+', '', text)  # remove non-ASCII
+    return text
 
 def generate_pdf(damage_data, marked_img_bytes, original_img_bytes, cost_data):
     pdf = FPDF()
@@ -72,7 +80,7 @@ def generate_pdf(damage_data, marked_img_bytes, original_img_bytes, cost_data):
     pdf.set_font("Arial", '', 12)
     img = Image.open(io.BytesIO(original_img_bytes)).convert("RGB")
     for idx, dmg in enumerate(damage_data):
-        part = dmg.get("part", "")
+        part = sanitize_text(dmg.get("part", ""))
         conf = dmg.get("confidence", 0)
         bbox = dmg.get("bbox", [])
         pdf.cell(0, 10, f"{idx+1}. {part} - Confidence: {conf:.2f}%", ln=True)
@@ -91,9 +99,13 @@ def generate_pdf(damage_data, marked_img_bytes, original_img_bytes, cost_data):
     pdf.set_font("Arial", 'B', 14)
     pdf.cell(0, 10, "Estimated Repair Cost", ln=True)
     pdf.set_font("Arial", '', 12)
-    pdf.multi_cell(0, 10, cost_data.get("manual_estimate", "").replace("₹", "Rs."))
+
+    manual = sanitize_text(cost_data.get("manual_estimate", ""))
+    gemini = sanitize_text(cost_data.get("gemini_estimate", ""))
+
+    pdf.multi_cell(0, 10, manual)
     pdf.ln(5)
-    pdf.multi_cell(0, 10, cost_data.get("gemini_estimate", "").replace("₹", "Rs."))
+    pdf.multi_cell(0, 10, gemini)
 
     pdf.output("report.pdf")
     with open("report.pdf", "rb") as f:
